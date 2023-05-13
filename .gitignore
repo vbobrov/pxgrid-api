@@ -1,0 +1,9 @@
+env
+.vscode
+*.swp
+.*
+t_*
+!.gitignore
+__pycache__
+build*
+*egg-info
