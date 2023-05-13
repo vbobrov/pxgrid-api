@@ -7,3 +7,4 @@ t_*
 __pycache__
 build*
 *egg-info
+dist*

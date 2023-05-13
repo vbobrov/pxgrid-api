@@ -35,7 +35,9 @@ This library simplifies interaction with ISE pxGrid
 ```
 # Optionally create virtual env
 python3 -m venv env
-pip install px-api
+
+# Install the module
+pip install pxgrid-api
 ```
 
 ## Usage
