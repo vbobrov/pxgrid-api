@@ -25,7 +25,7 @@ pxGrid requires FQDNs of all the nodes to be resolvable. It is not possible to u
 * https://developer.cisco.com/codeexchange/github/repo/cisco-pxgrid/python-advanced-examples
 
 
-# pxAPI Library
+# PXAPI Library
 
 This library simplifies interaction with ISE pxGrid
 
@@ -33,9 +33,6 @@ This library simplifies interaction with ISE pxGrid
 ## Installation
 
 ```
-# Optionally create virtual env
-python3 -m venv env
-
 # Install the module
 pip install pxgrid-api
 ```
@@ -134,7 +131,15 @@ api.topic_subscribe("com.cisco.ise.session","sessionTopic",on_message)
 
 # pxshell
 
-This utility is an interactive wrapper for pxAPI library. It allows interaction with pxGrid using simple CLI interface.
+This utility is an interactive wrapper for PXAPI library. It allows interaction with pxGrid using simple CLI interface.
+
+## Installation
+This cli utility is installed along with PXAPI with the same command.
+
+```
+# Install the module
+pip install pxgrid-api
+```
 
 ## Usage
 
