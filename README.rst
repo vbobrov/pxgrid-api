@@ -8,6 +8,8 @@ This repo includes two components:
 
 pxGrid requires FQDNs of all the nodes to be resolvable. It is not possible to use the library or the CLI utility to connect to ISE via IP address, even if there's just one node. Hosts record will work as well.
 
+Full API documention is available at https://pxgrid-api.readthedocs.io/
+
 Features
 --------
 
