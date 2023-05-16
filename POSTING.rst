@@ -9,6 +9,7 @@ pypi
 The following modules are needed for building and posting to pypi
 
 .. code-block:: console
+
   $ pip install build twine
 
 
@@ -19,11 +20,13 @@ Any time the package is uploaded to pypi, its name must be different than the pr
 Start by deleting existing packages from dist/ folder
 
 .. code-block:: console
+
   $ rm dist/*
 
 Run **built** module
 
 .. code-block:: console
+
   $ python -m build
   --- snip ---
   Successfully built pxgrid-api-0.1.2.tar.gz and pxgrid_api-0.1.2-py3-none-any.whl
@@ -36,6 +39,7 @@ Run **built** module
 Next, we use twine utility to upload the package to pypi. As of this writing, pypi allows basic authentication with password even when MFA is enabled on the account. This might be blocked in the future and API key will be required for uploads.
 
 .. code-block:: console
+  
   $ twine upload dist/*
   Uploading distributions to https://upload.pypi.org/legacy/
   Enter your username: user
