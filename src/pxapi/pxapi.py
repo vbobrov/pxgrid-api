@@ -395,6 +395,7 @@ class PXAPI:
     def anc_apply_endpoint_by_mac_address(self,policy,mac):
         """Apply ANC Policy by MAC Address. Endpoint does not need to be online.\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlapplyendpointbymacaddress
+        
         :param policy: name of ANC Policy
         :param mac: MAC Address of endpoint
         """
@@ -404,6 +405,7 @@ class PXAPI:
     def anc_apply_endpoint_by_ip_address(self,policy,ip):
         """Apply ANC Policy by IP Address. Requires that the endpoint is connected to the network.\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlapplyendpointbyipaddress
+
         :param policyName: name of ANC Policy
         :param ip: IP Address of endpoint
         """
