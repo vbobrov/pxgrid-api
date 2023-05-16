@@ -28,10 +28,10 @@ class PXShell(cmd.Cmd):
             if not hasattr(self,"api"):
                 print("API is not initialized. Use config apply.")
                 return
-        try:
-            return(cmd.Cmd.onecmd(self, line))
-        except Exception as e:
-            print("Error occured: {}".format(e))
+        #try:
+        return(cmd.Cmd.onecmd(self, line))
+        #except Exception as e:
+        #    print("Error occured: {}".format(e))
 
     def print_json(self,value):
         print(json.dumps(value,indent=2))

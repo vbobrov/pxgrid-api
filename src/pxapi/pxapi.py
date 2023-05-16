@@ -9,55 +9,10 @@ import websocket
 import ssl
 import base64
 from dateutil import parser
+from .stompframe import StompFrame
 
 HTTP_GET="GET"
 HTTP_POST="POST"
-
-class StompFrame:
-    def __init__(self,command,headers,data=""):
-        """Initializes class
-
-        :param command: STOMP command
-        :param headers: dict object will headers for the frame
-        :param data: (optional) string containing the data to be included in the frame
-
-        """
-        self.command=command
-        self.headers=headers
-        if data!="":
-            self.headers["content-length"]=str(len(data))
-        self.data=data
-
-    
-    def get_frame(self):
-        """Returns a binary string containing the raw STOMP frame
-
-        :return: binary string containing raw STOMP frame
-        """
-        frame=self.command+"\n"
-        for key in self.headers:
-            frame=frame+key+":"+self.headers[key]+"\n"
-        frame=frame+"\n"
-        if self.data!="":
-            frame=frame+self.data
-        frame=frame+"\x00"
-        return(frame.encode("utf-8"))
-
-    @staticmethod
-    def parse_packet(packet):
-        """Parses a binary string containing raw STOMP frame and returns StompFrame object
-
-        :param packet: binary string containing raw STOMP packet
-        :return: StompFrame class
-        """
-        lines=packet.decode("utf-8").split("\n")
-        command=lines[0]
-        headers={}
-        for lineNum in range (1,len(lines)-2):
-            header=lines[lineNum].split(":")
-            headers[header[0]]=header[1]
-        data=lines[-1].replace("\x00","")
-        return(StompFrame(command,headers,data))
 
 class PXAPI:
     SERVICE_ANC="com.cisco.ise.config.anc"
@@ -131,7 +86,7 @@ class PXAPI:
         if not self.__is_valid_mac(mac):
             raise Exception(f"Invalid MAC Address (must be HH:HH:HH:HH:HH:HH) {format(mac)}")
 
-    def send_http_request(self,request_type,url,username,password,data={},headers={},**kwargs):
+    def __send_http_request(self,request_type,url,username,password,data={},headers={},**kwargs):
         """Send HTTP request
 
         :param request_type: string containing GET or POST
@@ -140,7 +95,7 @@ class PXAPI:
         :param password: basic auth password
         :param data: (optional) dict containing data to be in the body of the request
         :param headers: (optional) headers to be included in the request
-        :param **kwargs: additional arguments
+        :param \*\*kwargs: additional arguments
 
         :Keyword Arguments:
             skipauth: (boolean) if true username and password are not included in the request
@@ -163,37 +118,37 @@ class PXAPI:
             return(response)
         raise Exception(f"sendHTTPRequest: Unknown Request Type {format(request_type)}")
     
-    def send_px_request(self,service,data={},**kwargs):
+    def __send_px_request(self,service,data={},**kwargs):
         """Send pxGrid request
 
         :param service: pxGrid service name
         :param data: dict containing service-specific data to be sent
-        :param **kwargs: additional keywords to be passed to send_http_request
+        :param \*\*kwargs: additional keywords to be passed to __send_http_request
         """
         url=f"https://{self.px_node}:8910/pxgrid/control/{service}"
         if self.client_cert_file and self.client_key_file:
             password=None
         else:
             password=self.password
-        response=self.send_http_request(HTTP_POST,url,self.client_name,password,data,**kwargs)
+        response=self.__send_http_request(HTTP_POST,url,self.client_name,password,data,**kwargs)
         if response.status_code==200:
             return(response.json())
         raise Exception(f"Request {service} failed with code {response.status_code}. Content: {response.text}")
     
-    def send_px_api(self,service,api,data={},**kwargs):
+    def __send_px_api(self,service,api,data={},**kwargs):
         """Execute pxGrid API
 
         :param service: pxGrid service name
         :param api: name of the API
         :param data: dict containing service-specific data to be sent
-        :param **kwargs: additional keywords to be passed to send_http_request
+        :param \*\*kwargs: additional keywords to be passed to __send_http_request
         """
         service_info=self.service_lookup(service)
         node_name=service_info["services"][0]["nodeName"]
         rest_base_url=service_info["services"][0]["properties"]["restBaseUrl"]
         secret=self.get_access_secret(node_name)
         url=f"{rest_base_url}/{api}"
-        response=self.send_http_request(HTTP_POST,url,self.client_name,secret,data,**kwargs)
+        response=self.__send_http_request(HTTP_POST,url,self.client_name,secret,data,**kwargs)
         if response.status_code==200:
             try:
                 return(response.json())
@@ -224,6 +179,7 @@ class PXAPI:
         ws_url=pubsub_info["services"][0]["properties"]["wsUrl"]
         secret=self.get_access_secret(node_name)
         ssl_context=ssl.create_default_context()
+        print("test")
         if self.client_cert_file and self.client_key_file:
             ssl_context.load_cert_chain(certfile=self.client_cert_file,keyfile=self.client_key_file)
         if self.root_ca_file:
@@ -240,7 +196,7 @@ class PXAPI:
             print("^C pressed. Exiting")
 
     def context_in(self,asset_data):
-        """Sent data via Context-In
+        """Sent data via Context-In\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Endpoint-Asset
 
         :param asset_data: dict containing data as documented here: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Endpoint-Asset
@@ -267,114 +223,117 @@ class PXAPI:
         ws.close()
 
     def account_create(self):
-        """Creates a username for password based access
+        """Creates a username for password based access\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/pxGrid-Consumer#accountcreate
 
         :return: dict with new account information
         """
-        return(self.send_px_request("AccountCreate",{"nodeName": self.client_name},skipauth=True))
+        return(self.__send_px_request("AccountCreate",{"nodeName": self.client_name},skipauth=True))
     
     def account_activate(self,wait=False):
-        """Activate pxGrid Account in ISE
+        """Activate pxGrid Account in ISE\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/pxGrid-Consumer#accountactivate
 
         :param wait: if set to True, the API call will retry every 60 seconds until the account is approved in ISE
         :return: dict containing account status
         """
         while True:
-            account_state=self.send_px_request("AccountActivate",{})
+            account_state=self.__send_px_request("AccountActivate",{})
             if not wait or account_state["accountState"]=="ENABLED":
                 return(account_state)
             time.sleep(60)
     
     def service_lookup(self,service):
-        """Looks up pxGrid service information
+        """Looks up pxGrid service information\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/pxGrid-Consumer#servicelookup
 
         :param service: name of pxGrid service
+        :return: dict containing service information
         """
-        return(self.send_px_request("ServiceLookup",{"name":service}))
+        return(self.__send_px_request("ServiceLookup",{"name":service}))
 
     def service_register(self,service,properties):
-        """Register pxGrid service
+        """Register pxGrid service\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/pxGrid-Provider#serviceregister
 
         :param service: name of new service
         :param properties: Service properties
         """
-        return(self.send_px_request("ServiceRegister",{"name":service,"properties":properties}))
+        return(self.__send_px_request("ServiceRegister",{"name":service,"properties":properties}))
 
     def get_access_secret(self,peer_node_name):
+        """Retrieve Access Secret to communicate to a pxGrid node\n
+        Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/pxGrid-Consumer#accesssecret
+
+        :param peer_node_name: Name of the remote node
+        :return: node secret
         """
-        Retrieve Access Secret to communicate to a pxGrid node
-            peer_node_name: Name of the remote node
-        """
-        return(self.send_px_request("AccessSecret",{"peerNodeName":peer_node_name})["secret"])
+        return(self.__send_px_request("AccessSecret",{"peerNodeName":peer_node_name})["secret"])
     
     def get_sessions(self):
-        """Retrieve all active sessions
+        """Retrieve all active sessions\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Session-Directory#post-restbaseurlgetsessions
 
         :return: dict containing all sessions
         """
-        return(self.send_px_api(self.SERVICE_SESSION,"getSessions"))
+        return(self.__send_px_api(self.SERVICE_SESSION,"getSessions"))
     
     def get_session_by_ip_address(self,ip):
-        """Retrieve active session by IP Address
+        """Retrieve active session by IP Address\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Session-Directory#post-restbaseurlgetsessionbyipaddress
 
         :param ip: endpoint IP Address
         :return: dict containing all sessions for the IP Address
         """
         self.__check_ip(ip)
-        return(self.send_px_api(self.SERVICE_SESSION,"getSessionByIpAddress",{"ip":ip}))
+        return(self.__send_px_api(self.SERVICE_SESSION,"getSessionByIpAddress",{"ip":ip}))
 
     def get_session_by_mac_address(self,mac):
-        """Retrieve active session by MAC Address
+        """Retrieve active session by MAC Address\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Session-Directory#post-restbaseurlgetsessionbymacaddress
 
         :param mac: endpoint MAC Address
         :return: dict containing all sessions for the MAC Address
         """
         self.__check_mac(mac)
-        return(self.send_px_api(self.SERVICE_SESSION,"getSessionByMacAddress",{"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_SESSION,"getSessionByMacAddress",{"mac":mac}))
 
     def get_user_groups(self):
-        """Retrieve all user to group assignments
+        """Retrieve all user to group assignments\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Session-Directory#post-restbaseurlgetusergroups
 
         :return: dict of all user groups
         """
-        return(self.send_px_api(self.SERVICE_SESSION,"getUserGroups"))
+        return(self.__send_px_api(self.SERVICE_SESSION,"getUserGroups"))
 
     def get_user_group_by_username(self,username):
-        """Retries group assignment for a specific user
+        """Retries group assignment for a specific user\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Session-Directory#post-restbaseurlgetusergroupbyusername
 
         :param username: username of the user
         :return: dict of all groups that the user belongs to
         """
-        return(self.send_px_api(self.SERVICE_SESSION,"getUserGroupByUserName",{"userName":username}))
+        return(self.__send_px_api(self.SERVICE_SESSION,"getUserGroupByUserName",{"userName":username}))
     
     def anc_get_policies(self):
-        """Retrieve all ANC Policies
+        """Retrieve all ANC Policies\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlgetpolicies
 
         :return: dict of all ANC policies
         """
-        return(self.send_px_api(self.SERVICE_ANC,"getPolicies"))
+        return(self.__send_px_api(self.SERVICE_ANC,"getPolicies"))
 
     def anc_get_policy_by_name(self,name):
-        """Retrieve ANC Policy by name
+        """Retrieve ANC Policy by name\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlgetpolicybyname
 
         :param name: name of ANC Policy
         :return: dict containing policy information
         """
-        return(self.send_px_api(self.SERVICE_ANC,"getPolicyByName",{"name":name}))
+        return(self.__send_px_api(self.SERVICE_ANC,"getPolicyByName",{"name":name}))
     
     def anc_create_policy(self,name,actions):
-        """Create ANC Policy
+        """Create ANC Policy\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlcreatepolicy
         
         :param name: name of ANC Policy
@@ -384,45 +343,45 @@ class PXAPI:
         """
         if not actions in ["QUARANTINE","SHUT_DOWN","PORT_BOUNCE"]:
             raise Exception(f"Invalid action {format(actions)}. Valid options: QUARANTINE, SHUT_DOWN or PORT_BOUNCE")
-        return(self.send_px_api(self.SERVICE_ANC,"createPolicy",{"name":name,"actions":[actions]}))
+        return(self.__send_px_api(self.SERVICE_ANC,"createPolicy",{"name":name,"actions":[actions]}))
         
     def anc_delete_policy_by_name(self,name):
-        """Delete ANC Policy
+        """Delete ANC Policy\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurldeletepolicybyname
 
         :param name: name of ANC Policy
         """
-        return(self.send_px_api(self.SERVICE_ANC,"deletePolicyByName",{"name":name}))
+        return(self.__send_px_api(self.SERVICE_ANC,"deletePolicyByName",{"name":name}))
 
     def anc_get_endpoints(self):
-        """Retrive all endpoints assigned to ANC Policies
+        """Retrive all endpoints assigned to ANC Policies\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlgetendpoints
 
         :return: dict of ANC Policy assignments
         """
-        return(self.send_px_api(self.SERVICE_ANC,"getEndpoints"))
+        return(self.__send_px_api(self.SERVICE_ANC,"getEndpoints"))
 
     def anc_get_endpoint_by_mac_address(self,mac):
-        """Retrieve ANC Policy assignment by MAC Address
+        """Retrieve ANC Policy assignment by MAC Address\n
         Reference https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlgetendpointbymacaddress
 
         :param mac: MAC Address of the endpoint
         :return: dict of ANC Policy assigned to MAC Address
         """
         self.__check_mac(mac)
-        return(self.send_px_api(self.SERVICE_ANC,"getEndpointByMacAddress",{"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_ANC,"getEndpointByMacAddress",{"mac":mac}))
     
     
     def anc_get_endpoint_policies(self):
-        """Retrieves endpoint to ANC Policy assignments based on MAC Address and NAS-IP-Address.
+        """Retrieves endpoint to ANC Policy assignments based on MAC Address and NAS-IP-Address\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlgetendpointpolicies-since-ise-26p7-27p2-30
 
         :return: dict with ANC Policy assigned to a MAC Address and NAS-IP-Address
         """
-        return(self.send_px_api(self.SERVICE_ANC,"getEndpointPolicies"))
+        return(self.__send_px_api(self.SERVICE_ANC,"getEndpointPolicies"))
     
     def anc_get_endpoint_by_nas_ip_address(self,mac,nas_ip):
-        """Retrieves endpoint to ANC Policy assignments based on MAC Address and NAS-IP-Address.
+        """Retrieves endpoint to ANC Policy assignments based on MAC Address and NAS-IP-Address\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlgetendpointbynasipaddress-since-ise-26p7-27p2-30
         
         :param mac: endpoint MAC Address
@@ -431,28 +390,28 @@ class PXAPI:
         """
         self.__check_mac(mac)
         self.__check_ip(nas_ip)
-        return(self.send_px_api(self.SERVICE_ANC,"getEndpointByNasIpAddress",{"mac":mac,"nasIpAddress":nas_ip}))
+        return(self.__send_px_api(self.SERVICE_ANC,"getEndpointByNasIpAddress",{"mac":mac,"nasIpAddress":nas_ip}))
 
     def anc_apply_endpoint_by_mac_address(self,policy,mac):
-        """Apply ANC Policy by MAC Address. Endpoint does not need to be online.
+        """Apply ANC Policy by MAC Address. Endpoint does not need to be online.\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlapplyendpointbymacaddress
         :param policy: name of ANC Policy
         :param mac: MAC Address of endpoint
         """
         self.__check_mac(mac)
-        return(self.send_px_api(self.SERVICE_ANC,"applyEndpointByMacAddress",{"policyName":policy,"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_ANC,"applyEndpointByMacAddress",{"policyName":policy,"mac":mac}))
 
     def anc_apply_endpoint_by_ip_address(self,policy,ip):
-        """Apply ANC Policy by IP Address. Requires that the endpoint is connected to the network
+        """Apply ANC Policy by IP Address. Requires that the endpoint is connected to the network.\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlapplyendpointbyipaddress
         :param policyName: name of ANC Policy
         :param ip: IP Address of endpoint
         """
         self.__check_ip(ip)
-        return(self.send_px_api(self.SERVICE_ANC,"applyEndpointByIpAddress",{"policyName":policy,"ip":ip}))
+        return(self.__send_px_api(self.SERVICE_ANC,"applyEndpointByIpAddress",{"policyName":policy,"ip":ip}))
 
     def anc_apply_endpoint_policy(self,policy,mac,nas_ip):
-        """Apply ANC Policy by MAC Address and NAS-IP-Address. Endpoint does not need to be connected to the network.
+        """Apply ANC Policy by MAC Address and NAS-IP-Address. Endpoint does not need to be connected to the network.\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlapplyendpointpolicy-since-ise-26p7-27p2-30
 
         :param policy: name of ANC Policy
@@ -461,19 +420,19 @@ class PXAPI:
         """
         self.__check_mac(mac)
         self.__check_ip(nas_ip)
-        return(self.send_px_api(self.SERVICE_ANC,"applyEndpointPolicy",{"policyName":policy,"mac":mac,"nasIpAddress":nas_ip}))
+        return(self.__send_px_api(self.SERVICE_ANC,"applyEndpointPolicy",{"policyName":policy,"mac":mac,"nasIpAddress":nas_ip}))
 
     def anc_clear_endpoint_by_mac_address(self,mac):
-        """Clear ANC Policy from endpoint by MAC Address
+        """Clear ANC Policy from endpoint by MAC Address\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlclearendpointbymacaddress
 
         :param mac: MAC Address of endpoint
         """
         self.__check_mac(mac)
-        return(self.send_px_api(self.SERVICE_ANC,"clearEndpointByMacAddress",{"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_ANC,"clearEndpointByMacAddress",{"mac":mac}))
     
     def anc_clear_endpoint_policy(self,mac,nas_ip):
-        """Clear ANC Policy from endpoint by MAC Address and NAS-IP-Address.
+        """Clear ANC Policy from endpoint by MAC Address and NAS-IP-Address\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlclearendpointpolicy-since-ise-26p7-27p2-30
 
         :param mac: MAC Address of endpoint
@@ -481,37 +440,37 @@ class PXAPI:
         """
         self.__check_mac(mac)
         self.__check_ip(nas_ip)
-        return(self.send_px_api(self.SERVICE_ANC,"clearEndpointPolicy",{"mac":mac,"nasIpAddress":nas_ip}))
+        return(self.__send_px_api(self.SERVICE_ANC,"clearEndpointPolicy",{"mac":mac,"nasIpAddress":nas_ip}))
 
     def anc_get_operation_status(self,operation_id):
-        """Get status of an ongoing ANC operation
+        """Get status of an ongoing ANC operation\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/ANC-configuration#post-restbaseurlgetoperationstatus
 
         :param operation_id: Operation ID to look up
         :return: dict containing operation status
         """
-        return(self.send_px_api(self.SERVICE_ANC,"getOperationStatus",{"operationId":operation_id}))
+        return(self.__send_px_api(self.SERVICE_ANC,"getOperationStatus",{"operationId":operation_id}))
 
     def mdm_get_endpoints(self):
-        """Retrieve all MDM endpoints and their MDM attributes
+        """Retrieve all MDM endpoints and their MDM attributes\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/MDM#post-restbaseurlgetendpoints
 
         :return: dict with all endpoints with MDM attributes
         """
-        return(self.send_px_api(self.SERVICE_MDM,"getEndpoints"))
+        return(self.__send_px_api(self.SERVICE_MDM,"getEndpoints"))
     
     def mdm_get_endpoint_by_mac_address(self,mac):
-        """Retrieve MDM status of an endpoint based on MAC Address
+        """Retrieve MDM status of an endpoint based on MAC Address\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/MDM#post-restbaseurlgetendpointbymacaddress
 
         :param mac: MAC Address of endpoint
         :return: dict with MDM attributes of the specified MAC Address
         """
         self.__check_mac(mac)
-        return(self.send_px_api(self.SERVICE_MDM,"getEndpointByMacAddress",{"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_MDM,"getEndpointByMacAddress",{"mac":mac}))
     
     def mdm_get_endpoints_by_type(self,mdm_type):
-        """Retrive MDM endpoints by type
+        """Retrive MDM endpoints by type\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/MDM#post-restbaseurlgetendpointsbytype
 
         :param mdm_type: Valid options are NON_COMPLIANT, REGISTERED or DISCONNECTED
@@ -519,10 +478,10 @@ class PXAPI:
         """
         if not mdm_type in ["NON_COMPLIANT","REGISTERED","DISCONNECTED"]:
             raise Exception(f"Invalid type {mdm_type}. Valid options: NON_COMPLIANT, REGISTERED or DISCONNECTED")
-        return(self.send_px_api(self.SERVICE_MDM,"getEndpointsByType",{"type":mdm_type}))
+        return(self.__send_px_api(self.SERVICE_MDM,"getEndpointsByType",{"type":mdm_type}))
     
     def mdm_get_endpoints_by_os_type(self,os_type):
-        """Retrive MDM endpoints by OS type
+        """Retrive MDM endpoints by OS type\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/MDM#post-restbaseurlgetendpointsbyostype
 
         :param os_type: valid options are ANDROID, IOS or WINDOWS
@@ -530,18 +489,18 @@ class PXAPI:
         """
         if not os_type in ["ANDROID","IOS","WINDOWS"]:
             raise Exception(f"Invalid OS type {os_type}. Valid options: ANDROID, IOS or WINDOWS")
-        return(self.send_px_api(self.SERVICE_MDM,"getEndpointsByOsType",{"osType":os_type}))
+        return(self.__send_px_api(self.SERVICE_MDM,"getEndpointsByOsType",{"osType":os_type}))
 
     def profiler_get_profiles(self):
-        """Retrive all profiles
+        """Retrive all profiles\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Profiler-configuration#post-restbaseurlgetprofiles
 
         :return: dict with all profiling policies
         """
-        return(self.send_px_api(self.SERVICE_PROFILER,"getProfiles"))
+        return(self.__send_px_api(self.SERVICE_PROFILER,"getProfiles"))
 
     def radius_get_failures(self,start_time=None):
-        """Retrieve RADIUS failure statistics
+        """Retrieve RADIUS failure statistics\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Radius-Failure#post-restbaseurlgetfailures
 
         :param start_time: (optional) specify a longer time range. By default, last 1 hour of statistics is retrieved.
@@ -550,19 +509,19 @@ class PXAPI:
         data={}
         if start_time:
             data["startTimestamp"]=parser.parse(start_time).astimezone().isoformat()
-        return(self.send_px_api(self.SERVICE_RADIUS,"getFailures",data))
+        return(self.__send_px_api(self.SERVICE_RADIUS,"getFailures",data))
 
     def radius_get_failures_by_id(self,id):
-        """Retrieve RADIUS failures by ID
+        """Retrieve RADIUS failures by ID\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/Radius-Failure#post-restbaseurlgetfailurebyid
 
         :param id: RADIUS code to retrieve
         :return: dict of RADIUS failures for the specified ID
         """
-        return(self.send_px_api(self.SERVICE_RADIUS,"getFailureById",{"id":id}))
+        return(self.__send_px_api(self.SERVICE_RADIUS,"getFailureById",{"id":id}))
 
     def system_get_healths(self,node_name=None,start_time=None):
-        """Retrieve system health statistics
+        """Retrieve system health statistics\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/System-Health#post-restbaseurlgethealths
 
         :param node_name: (ptional) filter by a specific ISE node
@@ -574,10 +533,10 @@ class PXAPI:
             data["nodeName"]=node_name
         if start_time:
             data["startTimestamp"]=parser.parse(start_time).astimezone().isoformat()
-        return(self.send_px_api(self.SERVICE_SYSTEM,"getHealths",data))
+        return(self.__send_px_api(self.SERVICE_SYSTEM,"getHealths",data))
 
     def system_get_performances(self,node_name=None,start_time=None):
-        """Retrieve system performance statistics
+        """Retrieve system performance statistics\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/System-Health#post-restbaseurlgetperformances
 
         :param node_name: (ptional) filter by a specific ISE node
@@ -589,10 +548,10 @@ class PXAPI:
             data["nodeName"]=node_name
         if start_time:
             data["startTimestamp"]=parser.parse(start_time).astimezone().isoformat()
-        return(self.send_px_api(self.SERVICE_SYSTEM,"getPerformances",data))
+        return(self.__send_px_api(self.SERVICE_SYSTEM,"getPerformances",data))
 
     def trustsec_get_security_groups(self,id=None):
-        """Retrieve Trustsec SGTs
+        """Retrieve Trustsec SGTs\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/TrustSec-configuration#post-restbaseurlgetsecuritygroups
 
         :param id: (optional) filter by ID
@@ -601,10 +560,10 @@ class PXAPI:
         data={}
         if id:
             data["id"]=id
-        return(self.send_px_api(self.SERVICE_TRUSTSECCFG,"getSecurityGroups",data))
+        return(self.__send_px_api(self.SERVICE_TRUSTSECCFG,"getSecurityGroups",data))
 
     def trustsec_get_security_group_acls(self,id=None):
-        """Retrieve Trustsec ACLs
+        """Retrieve Trustsec ACLs\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/TrustSec-configuration#post-restbaseurlgetsecuritygroupacls
 
         :param id: (optional) filter by ID
@@ -613,17 +572,17 @@ class PXAPI:
         data={}
         if id:
             data["id"]=id
-        return(self.send_px_api(self.SERVICE_TRUSTSECCFG,"getSecurityGroupAcls",data))
+        return(self.__send_px_api(self.SERVICE_TRUSTSECCFG,"getSecurityGroupAcls",data))
 
     def trustsec_get_virtual_network(self,id=None,start_index=None,record_count=None,start_timestamp=None,end_timestamp=None):
-        """Get Virtual Networks
+        """Get Virtual Networks\n
         Reference: https://github.com/cisco-pxgrid/pxgrid-rest-ws/wiki/TrustSec-configuration#post-restbaseurlgetvirtualnetwork
 
         :param id: (optional) filter by ID
         :param start_index: (optional) first index of the VN to be retrieved
         :param record_count: (optional) limit how many records are returned
-        :param start_timestamp: (option) retrieve VNs that were delete between start_timestamp and end_timestamp
-        :param end_timestamp: (option) retrieve VNs that were delete between start_timestamp and end_timestamp
+        :param start_timestamp: (optional) retrieve VNs that were delete between start_timestamp and end_timestamp
+        :param end_timestamp: (optional) retrieve VNs that were delete between start_timestamp and end_timestamp
         :return: dict of Virtual Networks
         """
         data={}
@@ -636,7 +595,7 @@ class PXAPI:
         if start_timestamp and end_timestamp:
             data["startTimestamp"]=parser.parse(start_timestamp).astimezone().isoformat()
             data["endTimestamp"]=parser.parse(start_timestamp).astimezone().isoformat()
-        return(self.send_px_api(self.SERVICE_TRUSTSECCFG,"getVirtualNetwork"),data)
+        return(self.__send_px_api(self.SERVICE_TRUSTSECCFG,"getVirtualNetwork"),data)
         
     def trustsec_get_egress_policies(self):
         """Retrive all Trustsec egress policies
@@ -644,7 +603,7 @@ class PXAPI:
 
         :return: dict of all egress policies
         """
-        return(self.send_px_api(self.SERVICE_TRUSTSECCFG,"getEgressPolicies"))
+        return(self.__send_px_api(self.SERVICE_TRUSTSECCFG,"getEgressPolicies"))
     
     def trustsec_get_egress_matrices(self):
         """Retrieve all Trustsec egress matrices
@@ -652,7 +611,7 @@ class PXAPI:
 
         :return: dict of all egress matrices
         """
-        return(self.send_px_api(self.SERVICE_TRUSTSECCFG,"getEgressMatrices"))
+        return(self.__send_px_api(self.SERVICE_TRUSTSECCFG,"getEgressMatrices"))
 
     def sxp_get_bindings(self):
         """Retrieve all SXP bindings
@@ -660,4 +619,4 @@ class PXAPI:
 
         :return: dict of all SXP bindings
         """
-        return(self.send_px_api(self.SERVICE_SXP,"getBindings"))
+        return(self.__send_px_api(self.SERVICE_SXP,"getBindings"))
