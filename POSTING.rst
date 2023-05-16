@@ -39,7 +39,7 @@ Run **built** module
 Next, we use twine utility to upload the package to pypi. As of this writing, pypi allows basic authentication with password even when MFA is enabled on the account. This might be blocked in the future and API key will be required for uploads.
 
 .. code-block:: console
-  
+
   $ twine upload dist/*
   Uploading distributions to https://upload.pypi.org/legacy/
   Enter your username: user
@@ -79,7 +79,8 @@ Next, we initialize with quick start
 
   import os
   import sys
-  sys.path.insert(0,"../../src/pxapi")
+  sys.path.insert(0,"../../src")
+  sys.path.insert(0,"../src")
   html_theme = 'sphinx_rtd_theme'
   extensions = ['sphinx.ext.autodoc']
 
@@ -101,4 +102,4 @@ To build local html files, run the following from docs/folder
 
 This will output documentation to **docs/build/html**
 
-readthedocs will automatically build documentation from GitHub source. There is no need to include html files when uploading to GitHub
+readthedocs will automatically build documentation from GitHub source on every commit. There is no need to include html files when uploading to GitHub
