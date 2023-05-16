@@ -9,12 +9,12 @@
 import os
 import sys
 
-sys.path.insert(0,"../src/pxapi")
+sys.path.insert(0,"../src")
 
 project = 'pxgrid-api'
 copyright = '2023, Viktor Bobrov'
 author = 'Viktor Bobrov'
-release = '0.2.1'
+release = '0.2.2'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

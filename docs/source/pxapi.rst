@@ -12,7 +12,7 @@ PXAPI module
 StompFrame module
 ------------------
 
-.. automodule:: stompframe
+.. automodule:: pxapi
    :members: StompFrame
    :undoc-members:
    :show-inheritance:

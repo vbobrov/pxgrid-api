@@ -57,7 +57,7 @@ REST API
 These are fairly straight forward. Review the comments in the code for reference.
 
 .. code-block:: python
-  
+
   #!/usr/bin/env python3
   from pxapi import PXAPI
 
@@ -211,6 +211,7 @@ Examples
 Check if account is approved in ISE
 
 .. code-block:: console
+
   pxshell> activate
   {'accountState': 'ENABLED', 'version': '2.0'}
 
