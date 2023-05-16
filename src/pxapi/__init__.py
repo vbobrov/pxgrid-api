@@ -1,3 +1,6 @@
+#
+# Copyright (c) 2023 Cisco Systems, Inc. and/or its affiliates
+#
 from .pxapi import PXAPI
 from .stompframe import StompFrame
 
