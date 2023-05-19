@@ -15,7 +15,7 @@ Installation
 Usage
 -----
 
-All commands are document and help can be retrived using help <command>
+All commands are document and help can be retrived using **help <command>**
 
 .. code-block:: console
 
