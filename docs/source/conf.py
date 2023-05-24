@@ -15,7 +15,7 @@ sys.path.insert(0,"../src")
 project = 'pxgrid-api'
 copyright = '2023, Viktor Bobrov'
 author = 'Viktor Bobrov'
-release = '0.2.3'
+release = '0.2.4'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

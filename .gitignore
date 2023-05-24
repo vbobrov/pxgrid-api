@@ -3,6 +3,7 @@ env
 *.swp
 .*
 t_*
+*_test.py
 !.gitignore
 __pycache__
 build*

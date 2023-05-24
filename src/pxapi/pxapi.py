@@ -296,7 +296,7 @@ class PXAPI:
         :return: dict containing all sessions for the MAC Address
         """
         self.__check_mac(mac)
-        return(self.__send_px_api(self.SERVICE_SESSION,"getSessionByMacAddress",{"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_SESSION,"getSessionByMacAddress",{"macAddress":mac}))
 
     def get_user_groups(self):
         """Retrieve all user to group assignments\n
@@ -369,7 +369,7 @@ class PXAPI:
         :return: dict of ANC Policy assigned to MAC Address
         """
         self.__check_mac(mac)
-        return(self.__send_px_api(self.SERVICE_ANC,"getEndpointByMacAddress",{"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_ANC,"getEndpointByMacAddress",{"macAddress":mac}))
     
     
     def anc_get_endpoint_policies(self):
@@ -390,7 +390,7 @@ class PXAPI:
         """
         self.__check_mac(mac)
         self.__check_ip(nas_ip)
-        return(self.__send_px_api(self.SERVICE_ANC,"getEndpointByNasIpAddress",{"mac":mac,"nasIpAddress":nas_ip}))
+        return(self.__send_px_api(self.SERVICE_ANC,"getEndpointByNasIpAddress",{"macAddress":mac,"nasIpAddress":nas_ip}))
 
     def anc_apply_endpoint_by_mac_address(self,policy,mac):
         """Apply ANC Policy by MAC Address. Endpoint does not need to be online.\n
@@ -400,7 +400,7 @@ class PXAPI:
         :param mac: MAC Address of endpoint
         """
         self.__check_mac(mac)
-        return(self.__send_px_api(self.SERVICE_ANC,"applyEndpointByMacAddress",{"policyName":policy,"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_ANC,"applyEndpointByMacAddress",{"policyName":policy,"macAddress":mac}))
 
     def anc_apply_endpoint_by_ip_address(self,policy,ip):
         """Apply ANC Policy by IP Address. Requires that the endpoint is connected to the network.\n
@@ -422,7 +422,7 @@ class PXAPI:
         """
         self.__check_mac(mac)
         self.__check_ip(nas_ip)
-        return(self.__send_px_api(self.SERVICE_ANC,"applyEndpointPolicy",{"policyName":policy,"mac":mac,"nasIpAddress":nas_ip}))
+        return(self.__send_px_api(self.SERVICE_ANC,"applyEndpointPolicy",{"policyName":policy,"macAddress":mac,"nasIpAddress":nas_ip}))
 
     def anc_clear_endpoint_by_mac_address(self,mac):
         """Clear ANC Policy from endpoint by MAC Address\n
@@ -431,7 +431,7 @@ class PXAPI:
         :param mac: MAC Address of endpoint
         """
         self.__check_mac(mac)
-        return(self.__send_px_api(self.SERVICE_ANC,"clearEndpointByMacAddress",{"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_ANC,"clearEndpointByMacAddress",{"macAddress":mac}))
     
     def anc_clear_endpoint_policy(self,mac,nas_ip):
         """Clear ANC Policy from endpoint by MAC Address and NAS-IP-Address\n
@@ -442,7 +442,7 @@ class PXAPI:
         """
         self.__check_mac(mac)
         self.__check_ip(nas_ip)
-        return(self.__send_px_api(self.SERVICE_ANC,"clearEndpointPolicy",{"mac":mac,"nasIpAddress":nas_ip}))
+        return(self.__send_px_api(self.SERVICE_ANC,"clearEndpointPolicy",{"macAddress":mac,"nasIpAddress":nas_ip}))
 
     def anc_get_operation_status(self,operation_id):
         """Get status of an ongoing ANC operation\n
@@ -469,7 +469,7 @@ class PXAPI:
         :return: dict with MDM attributes of the specified MAC Address
         """
         self.__check_mac(mac)
-        return(self.__send_px_api(self.SERVICE_MDM,"getEndpointByMacAddress",{"mac":mac}))
+        return(self.__send_px_api(self.SERVICE_MDM,"getEndpointByMacAddress",{"macAddress":mac}))
     
     def mdm_get_endpoints_by_type(self,mdm_type):
         """Retrive MDM endpoints by type\n
