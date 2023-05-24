@@ -1,3 +1,7 @@
+|Generic badge|
+
+.. |Generic badge| image:: https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg
+   :target: https://developer.cisco.com/codeexchange/github/repo/vbobrov/pxgrid-api
 
 Introduction
 ============
