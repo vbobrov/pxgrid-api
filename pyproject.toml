@@ -4,7 +4,7 @@ build-backend="setuptools.build_meta"
 
 [project]
 name = "pxgrid-api"
-version = "0.2.4"
+version = "0.2.5"
 description = "pxGrid API library and command line tool"
 readme = "README.rst"
 authors = [{ name = "Viktor Bobrov", email = "vibobrov@cisco.com" }]

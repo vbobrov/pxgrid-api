@@ -286,7 +286,7 @@ class PXAPI:
         :return: dict containing all sessions for the IP Address
         """
         self.__check_ip(ip)
-        return(self.__send_px_api(self.SERVICE_SESSION,"getSessionByIpAddress",{"ip":ip}))
+        return(self.__send_px_api(self.SERVICE_SESSION,"getSessionByIpAddress",{"ipAddress":ip}))
 
     def get_session_by_mac_address(self,mac):
         """Retrieve active session by MAC Address\n
@@ -410,7 +410,7 @@ class PXAPI:
         :param ip: IP Address of endpoint
         """
         self.__check_ip(ip)
-        return(self.__send_px_api(self.SERVICE_ANC,"applyEndpointByIpAddress",{"policyName":policy,"ip":ip}))
+        return(self.__send_px_api(self.SERVICE_ANC,"applyEndpointByIpAddress",{"policyName":policy,"ipAddress":ip}))
 
     def anc_apply_endpoint_policy(self,policy,mac,nas_ip):
         """Apply ANC Policy by MAC Address and NAS-IP-Address. Endpoint does not need to be connected to the network.\n
